@@ -1,0 +1,19 @@
+{
+  "name": "ggplot2-refactor",
+  "displayName": "ggplot2 Refactor",
+  "version": "0.1.0",
+  "description": "Refactor existing ggplot2 code into a transparent, reusable plot helper function. Elicits the design decisions from you, proposes a signature, and applies the refactor only after you approve.",
+  "author": {
+    "name": "Cynthia A. Huang",
+    "url": "https://www.cynthiahqy.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ggplot2",
+    "r",
+    "refactoring",
+    "helper-functions",
+    "data-visualization",
+    "code-design"
+  ]
+}

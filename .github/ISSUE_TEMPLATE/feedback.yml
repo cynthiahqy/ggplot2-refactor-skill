@@ -1,0 +1,68 @@
+name: Skill feedback
+description: Quick feedback after using the ggplot2 refactor skill
+title: "[feedback] "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying the skill!
+
+        **This is a public issue tracker.** Your GitHub username and everything
+        you write here will be visible to anyone and linked to your identity.
+        Please don't paste anything confidential.
+
+        This is a lightweight usage signal, not a research instrument. If you'd
+        like to contribute properly to the study on how R users reuse ggplot2
+        code, please take the survey instead (or as well) — it's anonymous and
+        takes about 5 minutes: https://www.cynthiahqy.com/survey
+
+  - type: input
+    id: helper_name
+    attributes:
+      label: What did you refactor?
+      description: e.g. "a calendar tile plot", "gg_survival_curve()"
+      placeholder: a stacked bar chart of monthly revenue
+    validations:
+      required: false
+
+  - type: dropdown
+    id: grouping
+    attributes:
+      label: Which grouping did you choose for the list arguments?
+      options:
+        - Layer-focused (.geom, .scale_coord, .theme)
+        - Chart-focused (plot-specific names)
+        - Hybrid
+        - Didn't get that far
+    validations:
+      required: false
+
+  - type: dropdown
+    id: return_type
+    attributes:
+      label: Does `+` still work on the result?
+      options:
+        - Yes - returns a ggplot
+        - No - returns something else
+        - Not sure
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: outcome
+    attributes:
+      label: How did it go?
+      options:
+        - label: I applied the refactor
+        - label: The questions helped me decide something I was unsure about
+        - label: I disagreed with a suggestion
+        - label: Something broke
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: Rough notes are perfect. What differed from what you expected?
+    validations:
+      required: false

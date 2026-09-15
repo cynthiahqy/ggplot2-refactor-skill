@@ -1,0 +1,19 @@
+{
+  "name": "ggplot2-refactor-skill",
+  "owner": {
+    "name": "Cynthia A. Huang",
+    "url": "https://www.cynthiahqy.com"
+  },
+  "description": "An agent skill for refactoring ggplot2 code into transparent helper functions",
+  "version": "0.1.0",
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "ggplot2-refactor",
+      "source": "./plugins/ggplot2-refactor",
+      "description": "Refactor existing ggplot2 code into a transparent, reusable plot helper function using the SEPARATE / EXPOSE / DOCUMENT principles"
+    }
+  ]
+}
