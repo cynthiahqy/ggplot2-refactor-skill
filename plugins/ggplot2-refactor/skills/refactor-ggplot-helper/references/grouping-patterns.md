@@ -113,3 +113,21 @@ plot. When you find one:
 - recommend documenting it explicitly, or
 - suggest splitting the offending component out into its own argument or into the
   fixed set.
+
+Two verdicts the "plainer, not wrong" test does not cover on its own:
+
+- **Empty, rather than plainer.** A group holding the only geoms yields a blank
+  panel when set to `list()`. That is not a plainer plot; it is no plot. Say so,
+  and consider whether that group should be fixed instead.
+- **A scale group that carries `limits`.** Dropping it falls back to a
+  data-driven default, so two calls that were comparable silently stop being
+  comparable. Nothing errors and each plot looks fine alone.
+
+### Do not split a mapping from its scale
+
+When grouping, keep an `aes()` mapping and its `scale_*()` in the same group, or
+make both switchable together (Step 3). They are not independently choosable —
+the type of the mapped column decides which scales are legal, so a group that
+exposes the scale alone lets the user build a combination that cannot render.
+This cuts across the layer- vs chart-focused choice: both groupings must respect
+it.
