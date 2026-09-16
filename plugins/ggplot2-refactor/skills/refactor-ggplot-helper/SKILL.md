@@ -9,14 +9,15 @@ description: >-
   helper", "make my ggplot2 code reusable", "write a plot helper function for
   this chart", "help me turn this into a reusable function", "my plot function
   has too many arguments", "how should I expose ggplot2 layers as arguments",
-  "design a ggplot2 wrapper", or when they mention transparent plot helpers,
+  "design a ggplot2 wrapper", "one function for two similar charts", "these two
+  plots are almost the same", or when they mention transparent plot helpers,
   list arguments for ggplot2 components, or .geom / .scale_coord / .theme style
   arguments.
 license: MIT
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, Bash
 metadata:
   author: Cynthia A. Huang
-  version: 0.1.0
+  version: 0.2.0
 compatibility: >-
   Designed for Claude Code, portable to any coding agent. If AskUserQuestion is
   unavailable, present each decision as a numbered plain-text menu and wait for
@@ -34,7 +35,7 @@ Based on three principles from Cynthia Huang's posit::conf(2026) talk:
 
 - **SEPARATE** — data preparation lives in its own functions, not inside the plot function.
 - **EXPOSE** — ggplot2 components are list arguments with real defaults, added via `+`.
-- **DOCUMENT** — state what is fixed, what is customisable, and how to change it.
+- **DOCUMENT** — state what is fixed, what is switchable, what is customisable, and how to change each.
 
 ## The rule that matters most
 
@@ -81,6 +82,13 @@ If the author has already grouped layers into named `list()` objects, say so —
 that is a strong signal about the grouping they already find natural, and you
 should reference it in Step 4.
 
+**Then look for sibling charts.** Scan the rest of the file for other plots
+built from the same prepared data. If you find one, inventory it too and diff
+the two tables — a component that appears in both buckets with different values
+is a `switchable` candidate in Step 3, and the whole refactor may serve several
+call sites with one helper. Do not assume the code you were pointed at is the
+only caller; ask if you are unsure.
+
 ## Step 2 — Decision A: what to modularise (SEPARATE)
 
 Do **not** ask an open question. Derive candidates from the inventory:
@@ -107,20 +115,73 @@ or keep them internal. **Recommend exporting** — documented, exported prep
 functions are what make `@inheritParams` work and let users prep data without
 plotting.
 
-## Step 3 — Decision B: fixed vs customisable (EXPOSE, part 1)
+## Step 3 — Decision B: fixed / switchable / customisable (EXPOSE, part 1)
 
-Split the plot-side components into **structural** (hard-coded; changing them
-breaks the plot's meaning) and **customisable** (exposed as a list argument with
-a default).
+Sort every plot-side component into one of three kinds. The axis is **how large
+the set of valid values is, and who gets to enumerate it** — not "how much
+freedom the user has".
+
+| Kind | Valid values | Enumerated by | Argument shape |
+|---|---|---|---|
+| **fixed** | one | you | none — hard-coded in the body |
+| **switchable** | a small, closed set | you | a constrained scalar (`rlang::arg_match()`) |
+| **customisable** | open | the user | a list argument with a default, added via `+` |
 
 Pre-recommend as fixed anything that references internally computed columns,
 with the reason stated plainly: *"a user who overrode this would get an error,
 not a different plot."*
 
-Then offer a third category. Fixed components can still expose their
-**parameters** as ordinary scalar arguments — `facet_wrap()` fixed, but `nrow`,
-`ncol` and `labeller` exposed. This is how you allow the common customisation
-without re-implementing every ggplot2 argument.
+**Before you finalise any `fixed` verdict, apply the switchable test:**
+
+> Does this component need to differ between two calls the user will actually
+> make? If yes, it is **switchable**, not fixed — even though it references a
+> computed column.
+
+This test matters because the computed-column rule, applied on its own, gives a
+confident wrong answer here rather than no answer. A component that references
+internal columns *and* must vary per call site is not a candidate for
+hard-coding and not a candidate for a free-form list argument either. Getting
+this wrong is what makes an author conclude "these need two separate helpers"
+when one would do.
+
+Switchable components take a constrained scalar argument, and the helper maps
+that scalar onto every coupled piece at once:
+
+```r
+gg_tile_shares <- function(.data, measure = c("pct", "any"), ...) {
+  measure  <- rlang::arg_match(measure)
+  fill_col <- switch(measure, pct = "pct_isiccomb", any = "any_isiccomb")
+  # aes(fill = .data[[fill_col]])        the mapping
+  # scale_fill_shares(measure)           the matching scale
+  # labs(fill = switch(measure, ...))    the matching legend label
+}
+```
+
+### A mapping and its scale are one unit
+
+When you classify a mapping, classify its scale with it. `aes(fill = x)` and
+`scale_fill_*()` are not independently choosable — the type of `x` decides which
+scales are legal. A continuous column with `scale_fill_manual(values = c("TRUE" =
+..., "FALSE" = ...))` errors; a logical column with `scale_fill_stepsn()` errors.
+
+So exposing the scale alone, without also selecting the column, hands the user
+half of a matched pair and lets them construct states that cannot render. If a
+mapping is switchable, its scale and its `labs()` entry are switchable too, and
+all of them move together on the one scalar. The same applies to `x`/`scale_x_*`
+and any other aesthetic whose scale constructor assumes a data type.
+
+### Exposing parameters of fixed components
+
+A component can stay fixed while its **parameters** become ordinary scalar
+arguments — `facet_wrap()` fixed, but `nrow`, `ncol` and `labeller` exposed.
+This is how you allow the common customisation without re-implementing every
+ggplot2 argument. Unlike a switchable argument, these are unconstrained: you are
+forwarding a value, not choosing between designs you have validated.
+
+Note the ordering interaction with Step 4: if Decision C puts a component inside
+a list argument, its scalars are reachable there already, and exposing them
+separately gives two ways to set one value. Flag any scalar whose fate depends
+on Decision C and settle it after Step 4 rather than now.
 
 ## Step 4 — Decision C: how to group the list arguments (EXPOSE, part 2)
 
@@ -164,9 +225,16 @@ Output, in this order:
 1. **The proposed signature**, one argument per line, defaults spelled out in
    full — show `geom_tile(color = "grey70", fill = "transparent")`, not a
    placeholder. The user must be able to read the actual defaults.
+   One exception: a default that depends on another argument cannot be a
+   literal (e.g. `.fill_scale = list(scale_fill_shares(measure))`). Write the
+   call, and say in a comment that it is resolved from the switchable argument
+   — R evaluates default arguments lazily, so this works, but the argument it
+   depends on must be bound in the body *before* the default is forced. Say so
+   in a source comment; reordering silently breaks it.
 2. **The file plan** — new files, which functions in each, what happens to the original.
 3. **The complete roxygen block**.
-4. **A before/after of the call site** — the messy chain collapsing into one call.
+4. **A before/after of every call site** — each messy chain collapsing into one
+   call. If the helper is switchable, show each variant being selected.
 
 Then ask: apply it / change a decision (→ ask which step, loop back) / show the
 full code without writing / stop here.

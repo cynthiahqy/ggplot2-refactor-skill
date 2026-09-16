@@ -37,6 +37,26 @@ State exactly what the user cannot change, and why it exists.
 #' - `labs()` to remove axis labels for calculated layout variables
 ```
 
+### 2b. The SWITCHABLE components
+
+If the helper has a switchable scalar (Step 3), document **every accepted value
+and what each one selects**. The user cannot discover this from the signature
+alone, because one argument is moving several coupled components at once.
+
+```r
+#' @param measure Which share to draw. One of:
+#'   - `"pct"` — fills by `pct_isiccomb` (continuous 0-1) with a stepped
+#'     orange scale, legend "Fraction of `isic` derived from `isiccomb`"
+#'   - `"any"` — fills by `any_isiccomb` (logical) with a two-colour manual
+#'     scale, legend "Crossmap involves at least 1 `isiccomb` split"
+#'   The mapping, its scale and its legend label move together; they cannot be
+#'   set independently, because a scale that does not match the column's type
+#'   will error.
+```
+
+State the coupling explicitly. A user who sees `.fill_scale` in the signature
+will otherwise assume they can pass any scale to it.
+
 ### 3. The DEFAULT CUSTOMISABLE components
 
 List every default **by name**. Do not summarise as "sensible defaults" — the
@@ -98,7 +118,12 @@ documented, which is the argument for exporting them:
 - `@export`
 - `@examples` — a runnable call showing one customisation, ideally demonstrating
   composition with `+` so readers see that it still works
-- `@importFrom` listing every ggplot2 function used internally
+- `@importFrom` listing every ggplot2 function used internally — **but only if
+ggplot2 is in `Imports`**. If the plotting packages are in `Suggests` (common
+for a package whose plots are optional), `@importFrom` on them is an
+`R CMD check` error. Use `::` calls throughout, guard the function body with
+`rlang::check_installed()`, and write examples under `@examplesIf
+rlang::is_installed(...)` rather than `\dontrun{}`
 
 ## Document the footguns
 
