@@ -444,14 +444,10 @@ gg_diagonal_bigraph <- function(
 xm <- as_xmap_tbl(demo$simple_links, xcode, alphacode, weight)
 
 gg_diagonal_bigraph(xm)
-```
 
-``` r
 # still composable
 gg_diagonal_bigraph(xm) + theme(legend.position = "right")
-```
 
-``` r
 # prep is reusable without plotting
 str(calc_bigraph_layout(xm), max.level = 1)
 ```
@@ -838,14 +834,10 @@ bind_layer_data <- function(components, data, mapping) {
 xm <- as_xmap_tbl(demo$simple_links, xcode, alphacode, weight)
 
 gg_link_xmap_nodes(xm)
-```
 
-``` r
 # a scalar exposed off a fixed component
 gg_link_xmap_nodes(xm, node_fill = "lightblue")
-```
 
-``` r
 # a bare geom acquires data + mapping via bind_layer_data()
 gg_link_xmap_nodes(xm, .links = list(ggforce::geom_diagonal(linewidth = 2)))
 ```

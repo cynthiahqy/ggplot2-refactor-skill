@@ -47,7 +47,7 @@ Decision C → group list arguments by ggplot2 object type, the same shape as
 ```{r}
 #| label: after-layer
 #| file: after-layer-focused.R
-#| fig-show: hide
+#| fig-keep: none
 ```
 
 ```{r}
@@ -98,7 +98,7 @@ weight.
 ```{r}
 #| label: after-chart
 #| file: after-chart-focused.R
-#| fig-show: hide
+#| fig-keep: none
 ```
 
 ```{r}
