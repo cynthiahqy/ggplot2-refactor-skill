@@ -92,7 +92,7 @@ Two ways, both optional:
 - **Quick feedback** — [open a feedback issue](https://github.com/cynthiahqy/ggplot2-refactor-skill/issues/new?template=feedback.yml&labels=feedback).
   Note this is a **public** tracker: your GitHub username and comment are visible
   to anyone.
-- **The actual study** — [take the survey](https://www.cynthiahqy.com/survey) on
+- **The actual study** — [take the survey](https://survey.ifkw.lmu.de/ggplot2_reuse/) on
   how R users turn ggplot2 code into reusable functions. Anonymous, ~5 minutes.
 
 ## Related

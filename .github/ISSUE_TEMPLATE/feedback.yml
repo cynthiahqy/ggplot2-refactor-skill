@@ -15,7 +15,7 @@ body:
         This is a lightweight usage signal, not a research instrument. If you'd
         like to contribute properly to the study on how R users reuse ggplot2
         code, please take the survey instead (or as well) — it's anonymous and
-        takes about 5 minutes: https://www.cynthiahqy.com/survey
+        takes about 5 minutes: https://survey.ifkw.lmu.de/ggplot2_reuse/
 
   - type: input
     id: helper_name
