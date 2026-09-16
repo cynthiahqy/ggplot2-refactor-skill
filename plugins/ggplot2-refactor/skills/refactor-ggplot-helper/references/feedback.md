@@ -12,7 +12,7 @@ Emit this, with `<url>` replaced by the constructed link:
 > - One-click feedback (30 seconds, prefilled): `<url>`
 >   — note this opens a **public** GitHub issue under your username.
 > - The study on how R users reuse ggplot2 code (anonymous, ~5 min):
->   https://www.cynthiahqy.com/survey
+>   https://survey.ifkw.lmu.de/ggplot2_reuse/
 >
 > Either way — thanks for trying this.
 

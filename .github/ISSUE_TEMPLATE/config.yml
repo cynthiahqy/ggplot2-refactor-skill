@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: ggplot2 reuse survey (the actual study)
-    url: https://www.cynthiahqy.com/survey
+    url: https://survey.ifkw.lmu.de/ggplot2_reuse/
     about: Tell me how you turn ggplot2 code into reusable functions — anonymous, ~5 minutes
   - name: Design principles blog post
     url: https://www.cynthiahqy.com/posts/ggplot-helper-design/
