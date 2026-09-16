@@ -1,0 +1,118 @@
+# Multi-dataset example: an xmap bigraph
+
+A second worked example for `refactor-ggplot-helper`, covering the case the
+[ggtilecal example](../before-ggtilecal.R) does not: **a plot whose layers
+inherit nothing.**
+
+Reproduce everything here with:
+
+```r
+install.packages(c("xmap", "ggforce", "ggrepel"))
+library(xmap)
+```
+
+## Why this example exists
+
+`before-ggtilecal.R` is a single-dataset chart. One `ggplot(data, aes(...))` at
+the top, every layer inherits from it. That is what lets `gg_facet_wrap_months()`
+put a bare `geom_tile(color = "grey70", fill = "transparent")` in `.geom` and
+have it just work.
+
+This chart is the other shape:
+
+| | ggtilecal | bigraph |
+|---|---|---|
+| top-level `ggplot()` | `ggplot(data, aes(...))` | **empty** |
+| datasets | 1 | **4** (`edges`, `from_nodes`, `to_nodes`, `labels`) |
+| `aes()` blocks | 1, inherited | **4**, one per layer |
+| layer `data =` | none | **on every layer** |
+
+With nothing to inherit, Step 3 and Step 4 of the skill pull in opposite
+directions. Step 3 says the `aes()` referencing computed columns
+(`from_y`, `to_y`, `label_x`, `id`, `curve_linetype`) is **fixed** — a user
+who overrode it would get an error, not a different plot. Step 4 says `.geom`
+defaults must be spelled out in full. But here **the default *is* the fixed
+aes**. There is no inheritance path to carry it separately.
+
+Both refactors below resolve that, differently. Neither resolution is obvious,
+and the skill currently offers no guidance for it.
+
+## The files
+
+| File | What it is |
+|---|---|
+| [`before-bigraph.R`](before-bigraph.R) | The original one-off chain, lifted from the xmap vignette |
+| [`after-layer-focused.R`](after-layer-focused.R) | Decision C → layer-focused: `.geom` / `.scale_coord` / `.theme` |
+| [`after-chart-focused.R`](after-chart-focused.R) | Decision C → chart-focused: `.links` / `.nodes` / `.weights` / `.layout` |
+| [`multi-dataset-bigraph.qmd`](multi-dataset-bigraph.qmd) | All three side by side with plots rendered |
+
+Both "after" files are **output-identical** to the "before":
+
+```r
+all.equal(
+  ggplot_build(plot_xmap_bigraph(xm))$data,
+  ggplot_build(gg_diagonal_bigraph(xm))$data
+)
+#> TRUE
+```
+
+## The two resolutions
+
+**Layer-focused** exploits lazy evaluation of default arguments. `.geom`'s
+default references `.layout$edges`, and `.layout <- calc_bigraph_layout(.xmap)`
+is bound in the function body *before* the `+` chain forces the defaults. It
+works, and it silently depends on assignment order — move that binding below
+the `+` chain and the function breaks with an unhelpful error.
+
+**Chart-focused** binds data and mapping onto user-supplied bare geoms *after*
+construction, via an internal `bind_layer_data()`. Two traps found while
+implementing it:
+
+- `ggproto(NULL, x)` to copy a layer builds a self-referential `super` chain
+  and dies with `node stack overflow`. The copy has to be done by hand on the
+  environment.
+- Without a copy, reusing one `.nodes` list for both node columns mutates
+  shared ggproto state, and both layers end up bound to `to_nodes` — a
+  silently wrong plot.
+
+Nothing in the skill hints that list arguments containing layers are mutable
+shared state.
+
+## Two further notes for the skill
+
+**Chart-focused merging does not always survive implementation.** The
+[grouping-patterns reference](../../references/grouping-patterns.md) merges two
+`geom_text()` calls into `.day_labels`. Applying the same recipe here merges
+the two `geom_label()` calls into `.nodes` — but those two layers need
+*different* data (`from_nodes` vs `to_nodes`), so a user-supplied two-element
+list would have to be bound positionally. `.nodes` had to become a *single*
+layer spec applied twice. Step 4 mandates a complete signature before any
+feasibility check exists.
+
+**Decision C can void Decision B's third category.** Under layer-focused
+grouping, every scalar worth exposing (`fill = "grey95"`, `linewidth = 0.6`,
+`size = 3`, `seed = 1`) already sits inside `.geom`, so exposing it *also* as a
+scalar gives two ways to set one value. The layer-focused run exposed none; the
+chart-focused run exposed four (`arrow_gap`, `node_fill`, `weight_label_size`,
+`seed`). Steps run B-then-C, but C's answer determines whether B's third
+category has anything left to apply to.
+
+## The removal-semantics check earns its keep here
+
+Step 4's removal check found a real latent bug. Setting `.scale_coord = list()`
+on the layer-focused helper does three things at once, one of them silent:
+
+- drops `scale_y_reverse()` — flips the diagram
+- drops `scale_x_continuous(limits = ...)` — clips the outer node labels
+- drops `scale_colour_discrete(aesthetics = c("colour", "fill"), limits = ...)`
+  — **de-synchronises the colour and fill palettes**, so a link and its own
+  weight label stop sharing a colour
+
+It builds without error. That is the silently-wrong-plot case, and it is
+documented in the helper under `@section Removing .scale_coord:`.
+
+---
+
+Generated by running the skill twice on the same target, changing only
+Decision C. Source: [`cynthiahqy/xmap`](https://github.com/cynthiahqy/xmap)
+`vignettes/applying-crossmaps.Rmd`.
