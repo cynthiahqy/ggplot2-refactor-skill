@@ -1,0 +1,140 @@
+---
+title: "Refactoring a multi-dataset ggplot2 chain"
+subtitle: "The same plot, refactored twice, changing only Decision C"
+format:
+  gfm:
+    toc: true
+    fig-width: 7
+    fig-height: 4.5
+execute:
+  warning: false
+  message: false
+---
+
+A worked example for the `refactor-ggplot-helper` skill, covering the case the
+ggtilecal example does not: a plot whose layers inherit nothing. See
+[README.md](README.md) for the findings; this document renders the plots.
+
+Reproduce with `install.packages(c("xmap", "ggforce", "ggrepel"))`.
+
+```{r}
+#| label: setup
+library(xmap)
+library(dplyr)
+library(ggplot2)
+
+xm <- as_xmap_tbl(demo$simple_links, xcode, alphacode, weight)
+xm
+```
+
+## Before
+
+The original one-off chain. Note the **empty** `ggplot()`, the four separate
+datasets, and the four `aes()` blocks each carrying its own `data =`. Nothing
+inherits.
+
+```{r}
+#| label: fig-before
+#| fig-cap: "Before: a one-off multi-dataset ggplot2 chain"
+#| file: before-bigraph.R
+```
+
+## After (a): layer-focused
+
+Decision C → group list arguments by ggplot2 object type, the same shape as
+`gg_facet_wrap_months()`.
+
+```{r}
+#| label: after-layer
+#| file: after-layer-focused.R
+#| fig-show: hide
+```
+
+```{r}
+#| label: fig-after-layer
+#| fig-cap: "After: layer-focused grouping"
+gg_diagonal_bigraph(xm)
+```
+
+The signature:
+
+```{r}
+#| label: sig-layer
+args(gg_diagonal_bigraph) |> str()
+```
+
+Still composable, and the prep is usable without plotting:
+
+```{r}
+#| label: fig-layer-compose
+#| fig-cap: "Composition with `+` still works"
+gg_diagonal_bigraph(xm) + theme(legend.position = "right")
+```
+
+```{r}
+#| label: layout-standalone
+str(calc_bigraph_layout(xm), max.level = 1)
+```
+
+### The removal-semantics footgun
+
+Emptying `.scale_coord` builds without error, but silently de-synchronises the
+colour and fill palettes so a link and its weight label stop sharing a colour —
+and flips the diagram vertically:
+
+```{r}
+#| label: fig-removal
+#| fig-cap: "`.scale_coord = list()` — builds fine, wrong plot"
+gg_diagonal_bigraph(xm, .scale_coord = list())
+```
+
+## After (b): chart-focused
+
+Decision C → group by what a reader of the chart sees. `.links` merges
+`geom_diagonal()` with `scale_alpha_continuous()` across the geom/scale
+boundary, because the alpha scale exists only to make edge opacity read as
+weight.
+
+```{r}
+#| label: after-chart
+#| file: after-chart-focused.R
+#| fig-show: hide
+```
+
+```{r}
+#| label: fig-after-chart
+#| fig-cap: "After: chart-focused grouping"
+gg_link_xmap_nodes(xm)
+```
+
+A scalar exposed off a fixed component — Decision B's third category, which
+survives here but is voided under layer-focused grouping:
+
+```{r}
+#| label: fig-chart-scalar
+#| fig-cap: "`node_fill` exposed as an ordinary scalar argument"
+gg_link_xmap_nodes(xm, node_fill = "lightblue")
+```
+
+A user-supplied bare geom, acquiring its data and mapping via
+`bind_layer_data()`:
+
+```{r}
+#| label: fig-chart-bare-geom
+#| fig-cap: "A bare `geom_diagonal()` supplied by the user"
+gg_link_xmap_nodes(xm, .links = list(ggforce::geom_diagonal(linewidth = 2)))
+```
+
+## Equivalence
+
+Both refactors reproduce the original exactly:
+
+```{r}
+#| label: equivalence
+b0 <- ggplot_build(plot_xmap_bigraph(xm))$data
+b1 <- ggplot_build(gg_diagonal_bigraph(xm))$data
+b2 <- ggplot_build(gg_link_xmap_nodes(xm))$data
+
+c(layer_focused = isTRUE(all.equal(b0, b1)),
+  chart_focused = isTRUE(all.equal(b0, b2)))
+```

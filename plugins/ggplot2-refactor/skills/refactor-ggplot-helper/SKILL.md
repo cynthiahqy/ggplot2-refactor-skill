@@ -200,3 +200,17 @@ interleaved data prep and a monolithic ggplot chain.
 the [ggtilecal](https://github.com/cynthiahqy/ggtilecal) package. Use them to
 check your own output: the "after" file is what a good run of this skill should
 converge on when the user picks the layer-focused grouping.
+
+### Second example: when nothing inherits
+
+`examples/multi-dataset-bigraph/` covers the case the ggtilecal example does
+not. That chart has one dataset and one top-level `ggplot(data, aes(...))`, so
+every layer inherits and a bare `geom_tile(...)` works as a `.geom` default.
+
+When the plot has an **empty `ggplot()` and per-layer `data =`**, Step 3 and
+Step 4 conflict: the `aes()` referencing computed columns is fixed, but *the
+default is that fixed aes*, and there is no inheritance path to carry it. Check
+the [README](examples/multi-dataset-bigraph/README.md) before proposing `.geom`
+defaults for any plot whose layers carry their own `data =`. It shows two
+working resolutions, the same target refactored under both groupings, and the
+traps in each.
